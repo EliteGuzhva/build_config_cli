@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::error::Error;
 use std::fs::File;
 use std::io::{self, BufReader, Write};
@@ -78,6 +79,16 @@ impl Default for Cargo {
     }
 }
 
+impl Cargo {
+    fn build(&self) {
+        let mut cmd = Command::new(&self.exe);
+        cmd.arg("build");
+        let output = cmd.output().unwrap();
+        io::stdout().write_all(&output.stdout).unwrap();
+        io::stderr().write_all(&output.stderr).unwrap();
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct BuildConfig {
     #[serde(default)]
@@ -96,13 +107,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let reader = BufReader::new(file);
     let config: BuildConfig = serde_json::from_reader(reader)?;
 
+    let pwd = env::current_dir()?;
+    println!("The current directory is {}", pwd.display());
+
     println!("{:#?}", config.cargo);
 
-    let mut cmd = Command::new(config.cargo.exe);
-    cmd.arg("build");
-    println!("{:#?}", cmd);
-    let output = cmd.output().expect("failed to execute process");
-    io::stdout().write_all(&output.stdout).unwrap();
+    config.cargo.build();
     // println!("{}", String::from_utf8(output.stdout).unwrap());
 
     Ok(())
